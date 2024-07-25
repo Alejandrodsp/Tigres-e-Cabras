@@ -1,0 +1,10 @@
+<div class="dialog-vencedor">
+  <span>
+    {{ (jogador === vencedor ? 'Parabéns ' : 'Infelizmente ') + (vencedor === 'tiger' ? 'os tigres' : 'as cabras') + ' venceram!' }}
+  </span>
+  <img [src]="'../assets/' + vencedor + '.png'" alt="Imagem do vencedor">
+
+  <button mat-raised-button color="primary" [mat-dialog-close]="true" class="btn-jogar-novamente">
+    <mat-icon>replay</mat-icon>Jogar novamente
+  </button>
+</div>
