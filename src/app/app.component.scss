@@ -133,6 +133,23 @@
         }
       }
     }
+
+    .container-btn-mute {
+      display: flex;
+      justify-content: flex-end;
+      width: 500px;
+
+      .mat-icon {
+        scale: 2;
+        color: var(--cor5);
+        cursor: pointer;
+        transition: transform 0.3s ease-in-out;
+      }
+
+      .mat-icon:hover {
+        scale: 2.2;
+      }
+    }
     
   }
 }

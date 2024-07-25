@@ -1,11 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   tabuleiro: (null | 'goat' | 'tiger')[][] = [
     ['tiger', null, null, null, 'tiger'],
     [null, null, null, null, null],
@@ -18,11 +18,19 @@ export class AppComponent {
   pecaSelecionada: (null | [number, number]) = null;
   cabrasTabuleiro = 0;
   cabrasMortas = 0;
+  backgroundMusic = new Audio();
   
   constructor() {}
 
+  ngOnInit() {
+    this.backgroundMusic.src = '../assets/background-music.mp3';
+    this.backgroundMusic.load();
+  }
+  
+
   selecionarModoJogo(modo: 'goat' | 'tiger') {
     this.jogador = modo;
+    this.backgroundMusic.play();
   }
 
   realizarJogada(rowIndex: number, colIndex: number) {
@@ -77,5 +85,9 @@ export class AppComponent {
 
   distanciaEuclidiana(x1: number, y1: number, x2: number, y2: number) {
     return Math.floor(Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)));
+  }
+
+  mutarMusica() {
+    this.backgroundMusic.muted ? this.backgroundMusic.muted = false : this.backgroundMusic.muted = true;
   }
 }
