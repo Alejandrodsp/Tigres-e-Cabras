@@ -17,6 +17,7 @@ export class AppComponent {
   jogadorAtual: 'goat' | 'tiger' = 'goat';
   pecaSelecionada: (null | [number, number]) = null;
   cabrasTabuleiro = 0;
+  cabrasMortas = 0;
   
   constructor() {}
 
@@ -33,19 +34,48 @@ export class AppComponent {
           this.cabrasTabuleiro++;
           moveu = true;
         }
+      } else {
+        if (this.tabuleiro[rowIndex][colIndex] === this.jogadorAtual) {
+          this.pecaSelecionada = [rowIndex, colIndex];
+        } else if (this.tabuleiro[rowIndex][colIndex] === null) {
+          if (this.pecaSelecionada) {
+            this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
+            this.pecaSelecionada = null;
+            this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
+            moveu = true;
+          }
+        }
       }
     } else {
       if (this.tabuleiro[rowIndex][colIndex] === this.jogadorAtual) {
         this.pecaSelecionada = [rowIndex, colIndex];
       } else if (this.tabuleiro[rowIndex][colIndex] === null) {
         if (this.pecaSelecionada) {
-          this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
-          this.pecaSelecionada = null;
-          this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
-          moveu = true;
+          const distancia = this.distanciaEuclidiana(rowIndex, colIndex, this.pecaSelecionada[0], this.pecaSelecionada[1]);
+          if (distancia === 1) {
+            this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
+            this.pecaSelecionada = null;
+            this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
+            moveu = true;
+          } else if (distancia === 2) {
+            const meioX = (rowIndex + this.pecaSelecionada[0]) / 2;
+            const meioY = (colIndex + this.pecaSelecionada[1]) / 2;
+            if (this.tabuleiro[meioX][meioY] === 'goat') {
+              this.tabuleiro[meioX][meioY] = null;
+              this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
+              this.pecaSelecionada = null;
+              this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
+              moveu = true;
+              this.cabrasMortas++;
+            }
+          }
         }
       }
     }
-    if (moveu == true) this.jogadorAtual = this.jogadorAtual === 'tiger' ? 'goat' : 'tiger';
+    if (moveu) this.jogadorAtual = this.jogadorAtual === 'tiger' ? 'goat' : 'tiger';
+  }
+
+  distanciaEuclidiana(x1: number, y1: number, x2: number, y2: number) {
+    return Math.floor(Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)));
   }
 }

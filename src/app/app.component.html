@@ -13,6 +13,11 @@
   </div>
 
   <div class="container-menu" *ngIf="jogador">
+    <div class="container-informacoes">
+      <span>Cabras colocadas: {{cabrasTabuleiro}}</span>
+      <span>Jogador da vez: {{jogadorAtual === 'tiger' ? "Tigres" : "Cabras" }}</span>
+      <span>Cabras mortas: {{cabrasMortas}}</span>
+    </div>
     <div class="tabuleiro">
       <div *ngFor="let row of tabuleiro; let rowIndex = index" class="row">
         <div *ngFor="let cell of row; let colIndex = index" class="cell" (click)="realizarJogada(rowIndex, colIndex)">
