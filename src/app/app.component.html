@@ -1,0 +1,25 @@
+<div class="container-game">
+  <div class="container-menu" *ngIf="!jogador">
+    <div class="titulo">
+      <h1>Tigres e Cabras</h1>
+    </div>
+    <div class="container-conteudo">
+      <span class="texto-deseja-jogar">Jogar como?</span>
+      <div class="container-deseja-jogar">
+        <div class="container-btn-selecao container-btn-selecao-tiger" (click)="selecionarModoJogo('tiger')"></div>
+        <div class="container-btn-selecao container-btn-selecao-goat"  (click)="selecionarModoJogo('goat')"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-menu" *ngIf="jogador">
+    <div class="tabuleiro">
+      <div *ngFor="let row of tabuleiro; let rowIndex = index" class="row">
+        <div *ngFor="let cell of row; let colIndex = index" class="cell" (click)="realizarJogada(rowIndex, colIndex)">
+          <img *ngIf="cell" [src]="'../assets/' + cell +'.png'" alt="" 
+          [ngClass]="pecaSelecionada && pecaSelecionada[0] === rowIndex && pecaSelecionada[1] === colIndex ? 'selecionada' : ''">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
