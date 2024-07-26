@@ -46,6 +46,7 @@ export class AppComponent implements OnInit {
     this.cabrasTabuleiro = 0;
     this.cabrasMortas = 0;
     this.vencedor = null;
+    this.historico_movimentos = { 'goat': [], 'tiger': []};
   }
 
   openModalVencedor() {
