@@ -24,6 +24,8 @@ export class AppComponent implements OnInit {
   movimentosValidos: { [key: string]: string[] } = {"0_0":["0_1","1_0","1_1"],"0_1":["0_2","0_0","1_1"],"0_2":["0_3","0_1","1_2","1_1","1_3"],"0_3":["0_4","0_2","1_3"],"0_4":["0_3","1_4","1_3"],"1_0":["1_1","2_0","0_0"],"1_1":["1_2","1_0","2_1","0_1","2_0","0_2","2_2","0_0"],"1_2":["1_3","1_1","2_2","0_2"],"1_3":["1_4","1_2","2_3","0_3","2_2","0_4","2_4","0_2"],"1_4":["1_3","2_4","0_4"],"2_0":["2_1","3_0","1_0","1_1","3_1"],"2_1":["2_2","2_0","3_1","1_1"],"2_2":["2_3","2_1","3_2","1_2","3_1","1_3","3_3","1_1"],"2_3":["2_4","2_2","3_3","1_3"],"2_4":["2_3","3_4","1_4","3_3","1_3"],"3_0":["3_1","4_0","2_0"],"3_1":["3_2","3_0","4_1","2_1","4_0","2_2","4_2","2_0"],"3_2":["3_3","3_1","4_2","2_2"],"3_3":["3_4","3_2","4_3","2_3","4_2","2_4","4_4","2_2"],"3_4":["3_3","4_4","2_4"],"4_0":["4_1","3_0","3_1"],"4_1":["4_2","4_0","3_1"],"4_2":["4_3","4_1","3_2","3_3","3_1"],"4_3":["4_4","4_2","3_3"],"4_4":["4_3","3_4","3_3"]};
   historicoMovimentos: any = { 'goat': [], 'tiger': []};
   capturasValidas: { [key: string]: string[] } = {"0_0":["0_2","2_0","2_2"],"0_1":["0_3","2_1"],"0_2":["0_4","0_0","2_2","2_0","2_4"],"0_3":["0_1","2_3"],"0_4":["0_2","2_4","2_2"],"1_0":["1_2","3_0"],"1_1":["1_3","3_1","3_3"],"1_2":["1_4","1_0","3_2"],"1_3":["1_1","3_3","3_1"],"1_4":["1_2","3_4"],"2_0":["2_2","4_0","0_0","0_2","4_2"],"2_1":["2_3","4_1","0_1"],"2_2":["2_4","2_0","4_2","0_2","4_0","0_4","4_4","0_0"],"2_3":["2_1","4_3","0_3"],"2_4":["2_2","4_4","0_4","4_2","0_2"],"3_0":["3_2","1_0"],"3_1":["3_3","1_1","1_3"],"3_2":["3_4","3_0","1_2"],"3_3":["3_1","1_3","1_1"],"3_4":["3_2","1_4"],"4_0":["4_2","2_0","2_2"],"4_1":["4_3","2_1"],"4_2":["4_4","4_0","2_2","2_4","2_0"],"4_3":["4_1","2_3"],"4_4":["4_2","2_4","2_2"]};
+  profundidade = 5;
+  melhorMovimento: { from: [number, number], to: [number, number] } | null = null;
   
   constructor(public dialog: MatDialog) {}
 
@@ -65,6 +67,9 @@ export class AppComponent implements OnInit {
   selecionarModoJogo(modo: 'goat' | 'tiger') {
     this.jogador = modo;
     this.backgroundMusic.play();
+    if (this.jogadorAtual !== this.jogador) {
+      this.realizarJogadaComputador();
+    }
   }
 
   realizarJogada(rowIndex: number, colIndex: number) {
@@ -79,14 +84,12 @@ export class AppComponent implements OnInit {
     };
 
     if (this.jogadorAtual === 'goat' && this.cabrasTabuleiro < 20) {
-      // Jogada de cabra: Adiciona uma nova cabra ao tabuleiro
       if (this.tabuleiro[rowIndex][colIndex] === null) {
         this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
         this.cabrasTabuleiro++;
         moveu = true;
       }
     } else {
-      // Jogada de tigre: Movimento ou captura
       if (this.tabuleiro[rowIndex][colIndex] === this.jogadorAtual) {
         this.pecaSelecionada = [rowIndex, colIndex];
       } else if (this.tabuleiro[rowIndex][colIndex] === null) {
@@ -127,24 +130,231 @@ export class AppComponent implements OnInit {
 
     if (moveu) {
       this.jogadorAtual = this.jogadorAtual === 'tiger' ? 'goat' : 'tiger';
-      this.verificaVencedor();
+      this.vencedor = this.verificaVencedor();
+
+      if (this.vencedor) {
+        this.openModalVencedor();
+      }
+
+      if (this.jogadorAtual !== this.jogador) {
+        this.realizarJogadaComputador();
+      }
     }
+  }
+
+  realizarJogadaComputador() {
+    const melhorMovimento = this.getMelhorMovimento(this.jogadorAtual);
+    if (melhorMovimento) {
+      const [fromRow, fromCol] = melhorMovimento.from;
+      const [toRow, toCol] = melhorMovimento.to;
+      if (fromRow !== -1 && fromCol !== -1) this.pecaSelecionada = [fromRow, fromCol];
+      this.realizarJogada(toRow, toCol);
+    }
+  }
+
+  private avaliar(profundidade: number = 0): number {
+    let pontuacao = 300 * this.tigresMovimentaveis() + 700 * this.cabrasMortas - 700 * this.espacosFechados() - profundidade;
+
+    const vencedor = this.verificaVencedor();
+    if (vencedor === 'goat') {
+      return -Infinity;
+    } else if (vencedor === 'tiger') {
+      return Infinity;
+    }
+
+    return pontuacao;
+  }
+
+  private espacosFechados(): number {
+    let espacosFechadosCount = 0;
+  
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        if (this.tabuleiro[row][col] === null) {
+          const posicao = `${row}_${col}`;
+          const movimentosValidos = this.movimentosValidos[posicao] || [];
+          const capturasValidas = this.capturasValidas[posicao] || [];
+  
+          let cercadoPorCabras = true;
+          for (const movimento of movimentosValidos) {
+            const [novoRow, novoCol] = movimento.split('_').map(Number);
+            if (this.tabuleiro[novoRow][novoCol] !== 'goat') {
+              cercadoPorCabras = false;
+              break;
+            }
+          }
+  
+          let acessivelPorTigre = false;
+          for (const captura of capturasValidas) {
+            const [novoRow, novoCol] = captura.split('_').map(Number);
+            const meioRow = (row + novoRow) / 2;
+            const meioCol = (col + novoCol) / 2;
+            if (this.tabuleiro[novoRow][novoCol] === null && this.tabuleiro[meioRow][meioCol] === 'tiger') {
+              acessivelPorTigre = true;
+              break;
+            }
+          }
+  
+          if (cercadoPorCabras && !acessivelPorTigre) {
+            espacosFechadosCount++;
+          }
+        }
+      }
+    }
+  
+    return espacosFechadosCount;
+  }
+  
+
+  private gerarListaMovimentos(): { from: [number, number], to: [number, number] }[] {
+    const movimentos: { from: [number, number], to: [number, number] }[] = [];
+  
+    if (this.jogadorAtual === 'goat' && this.cabrasTabuleiro < 20) {
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+          if (this.tabuleiro[row][col] === null) {
+            movimentos.push({ from: [-1, -1], to: [row, col] });
+          }
+        }
+      }
+    } else {
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+          if (this.tabuleiro[row][col] === this.jogadorAtual) {
+            const posicao = `${row}_${col}`;
+            const movimentosValidos = this.movimentosValidos[posicao] || [];
+            const capturasValidas = this.capturasValidas[posicao] || [];
+  
+            for (const movimento of movimentosValidos) {
+              const [novoRow, novoCol] = movimento.split('_').map(Number);
+              if (this.tabuleiro[novoRow][novoCol] === null) {
+                movimentos.push({ from: [row, col], to: [novoRow, novoCol] });
+              }
+            }
+  
+            if (this.jogadorAtual === 'tiger') {
+              for (const captura of capturasValidas) {
+                const [novoRow, novoCol] = captura.split('_').map(Number);
+                const meioRow = (row + novoRow) / 2;
+                const meioCol = (col + novoCol) / 2;
+                if (this.tabuleiro[novoRow][novoCol] === null && this.tabuleiro[meioRow][meioCol] === 'goat') {
+                  movimentos.push({ from: [row, col], to: [novoRow, novoCol] });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return movimentos;
+  }
+  
+
+  private mover(movimento: { from: [number, number], to: [number, number] }): void {
+    const [fromRow, fromCol] = movimento.from;
+    const [toRow, toCol] = movimento.to;
+  
+    if (fromRow === -1 && fromCol === -1) {
+      this.tabuleiro[toRow][toCol] = 'goat';
+      this.cabrasTabuleiro++;
+    } else {
+      if (this.tabuleiro[fromRow][fromCol] === 'tiger' && Math.abs(fromRow - toRow) === 2) {
+        const posicaoPecaCapturada = [(toRow + fromRow) / 2, (toCol + fromCol) / 2];
+        this.tabuleiro[posicaoPecaCapturada[0]][posicaoPecaCapturada[1]] = null;
+        this.cabrasMortas++;
+      }
+  
+      this.tabuleiro[toRow][toCol] = this.jogadorAtual;
+      this.tabuleiro[fromRow][fromCol] = null;
+    }
+  }
+  
+
+  private desfazerMovimento(movimento: { from: [number, number], to: [number, number] }): void {
+    const [fromRow, fromCol] = movimento.from;
+    const [toRow, toCol] = movimento.to;
+  
+    if (fromRow === -1 && fromCol === -1) {
+      this.tabuleiro[toRow][toCol] = null;
+      this.cabrasTabuleiro--;
+    } else {
+      if (this.tabuleiro[toRow][toCol] === 'tiger' && Math.abs(fromRow - toRow) === 2) {
+        const posicaoPecaCapturada = [(toRow + fromRow) / 2, (toCol + fromCol) / 2];
+        this.tabuleiro[posicaoPecaCapturada[0]][posicaoPecaCapturada[1]] = 'goat';
+        this.cabrasMortas--;
+      }
+  
+      this.tabuleiro[fromRow][fromCol] = this.jogadorAtual;
+      this.tabuleiro[toRow][toCol] = null;
+    }
+  }
+  
+
+  private minimax(profundidade: number, maximizingPlayer: boolean, alpha: number, beta: number): number {
+    if (profundidade === 0 || this.verificaVencedor() !== null) {
+      return this.avaliar(profundidade);
+    }
+
+    const movimentos = this.gerarListaMovimentos();
+
+    if (maximizingPlayer) {
+      let pontuacaoMaxima = -Infinity;
+      for (const movimento of movimentos) {
+        this.mover(movimento);
+        const pontuacao = this.minimax(profundidade - 1, false, alpha, beta);
+        this.desfazerMovimento(movimento);
+        if (pontuacao > pontuacaoMaxima) {
+          pontuacaoMaxima = pontuacao;
+          if (profundidade === this.profundidade) {
+            this.melhorMovimento = movimento;
+          }
+        }
+        alpha = Math.max(alpha, pontuacao);
+        if (beta <= alpha) {
+          break;
+        }
+      }
+      return pontuacaoMaxima;
+    } else {
+      let pontuacaoMinima = Infinity;
+      for (const movimento of movimentos) {
+        this.mover(movimento);
+        const pontuacao = this.minimax(profundidade - 1, true, alpha, beta);
+        this.desfazerMovimento(movimento);
+        if (pontuacao < pontuacaoMinima) {
+          pontuacaoMinima = pontuacao;
+          if (profundidade === this.profundidade) {
+            this.melhorMovimento = movimento;
+          }
+        }
+        beta = Math.min(beta, pontuacao);
+        if (beta <= alpha) {
+          break;
+        }
+      }
+      return pontuacaoMinima;
+    }
+  }
+
+  private getMelhorMovimento(player: 'goat' | 'tiger'): { from: [number, number], to: [number, number] } | null {
+    this.jogadorAtual = player;
+    this.melhorMovimento = null;
+    this.minimax(this.profundidade, player === 'tiger', -Infinity, Infinity);
+    return this.melhorMovimento;
   }
 
   verificaVencedor() {
     if (this.cabrasMortas === 5) {
-      this.vencedor = 'tiger';
-    } else if(this.todosTigresImobilizados()) {
-      this.vencedor = 'goat';
+      return 'tiger';
+    } else if(this.tigresMovimentaveis() === 0) {
+      return 'goat';
     }
-
-    if (this.vencedor) {
-      this.openModalVencedor();
-    }
+    return null;
   }
 
-  todosTigresImobilizados(): boolean {
+  tigresMovimentaveis(): number {
     const tigres = [];
+    let tigresMovimentaveis = 0;
     
     for (let i = 0; i < this.tabuleiro.length; i++) {
       for (let j = 0; j < this.tabuleiro[i].length; j++) {
@@ -158,25 +368,31 @@ export class AppComponent implements OnInit {
       const posicao = `${x}_${y}`;
       const movimentos = this.movimentosValidos[posicao] || [];
       const capturas = this.capturasValidas[posicao] || [];
+      let tigreMovimental = false;
   
       for (const movimento of movimentos) {
         const [novoX, novoY] = movimento.split('_').map(Number);
         if (this.tabuleiro[novoX][novoY] === null) {
-          return false;
+          tigreMovimental = true;
+          break;
         }
       }
-  
-      for (const captura of capturas) {
-        const [novoX, novoY] = captura.split('_').map(Number);
-        const meioX = (x + novoX) / 2;
-        const meioY = (y + novoY) / 2;
-        if (this.tabuleiro[novoX][novoY] === null && this.tabuleiro[meioX][meioY] === 'goat') {
-          return false;
+      
+      if (!tigreMovimental) {
+        for (const captura of capturas) {
+          const [novoX, novoY] = captura.split('_').map(Number);
+          const meioX = (x + novoX) / 2;
+          const meioY = (y + novoY) / 2;
+          if (this.tabuleiro[novoX][novoY] === null && this.tabuleiro[meioX][meioY] === 'goat') {
+            tigreMovimental = true;
+            break;
+          }
         }
       }
+
+      if (tigreMovimental) tigresMovimentaveis++;
     }
-  
-    return true;
+    return tigresMovimentaveis;
   }
 
   mutarMusica() {
