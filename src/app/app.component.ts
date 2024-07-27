@@ -130,7 +130,7 @@ export class AppComponent implements OnInit {
       const [fromRow, fromCol] = melhorMovimento.from;
       const [toRow, toCol] = melhorMovimento.to;
       if (fromRow !== -1 && fromCol !== -1) this.pecaSelecionada = [fromRow, fromCol];
-      this.realizarJogada(toRow, toCol);
+      setTimeout(() => { this.realizarJogada(toRow, toCol) }, 1000);
     }
   }
 
