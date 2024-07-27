@@ -22,7 +22,6 @@ export class AppComponent implements OnInit {
   vencedor: (null | 'goat' | 'tiger') = null;
   backgroundMusic = new Audio();
   movimentosValidos: { [key: string]: string[] } = {"0_0":["0_1","1_0","1_1"],"0_1":["0_2","0_0","1_1"],"0_2":["0_3","0_1","1_2","1_1","1_3"],"0_3":["0_4","0_2","1_3"],"0_4":["0_3","1_4","1_3"],"1_0":["1_1","2_0","0_0"],"1_1":["1_2","1_0","2_1","0_1","2_0","0_2","2_2","0_0"],"1_2":["1_3","1_1","2_2","0_2"],"1_3":["1_4","1_2","2_3","0_3","2_2","0_4","2_4","0_2"],"1_4":["1_3","2_4","0_4"],"2_0":["2_1","3_0","1_0","1_1","3_1"],"2_1":["2_2","2_0","3_1","1_1"],"2_2":["2_3","2_1","3_2","1_2","3_1","1_3","3_3","1_1"],"2_3":["2_4","2_2","3_3","1_3"],"2_4":["2_3","3_4","1_4","3_3","1_3"],"3_0":["3_1","4_0","2_0"],"3_1":["3_2","3_0","4_1","2_1","4_0","2_2","4_2","2_0"],"3_2":["3_3","3_1","4_2","2_2"],"3_3":["3_4","3_2","4_3","2_3","4_2","2_4","4_4","2_2"],"3_4":["3_3","4_4","2_4"],"4_0":["4_1","3_0","3_1"],"4_1":["4_2","4_0","3_1"],"4_2":["4_3","4_1","3_2","3_3","3_1"],"4_3":["4_4","4_2","3_3"],"4_4":["4_3","3_4","3_3"]};
-  historicoMovimentos: any = { 'goat': [], 'tiger': []};
   capturasValidas: { [key: string]: string[] } = {"0_0":["0_2","2_0","2_2"],"0_1":["0_3","2_1"],"0_2":["0_4","0_0","2_2","2_0","2_4"],"0_3":["0_1","2_3"],"0_4":["0_2","2_4","2_2"],"1_0":["1_2","3_0"],"1_1":["1_3","3_1","3_3"],"1_2":["1_4","1_0","3_2"],"1_3":["1_1","3_3","3_1"],"1_4":["1_2","3_4"],"2_0":["2_2","4_0","0_0","0_2","4_2"],"2_1":["2_3","4_1","0_1"],"2_2":["2_4","2_0","4_2","0_2","4_0","0_4","4_4","0_0"],"2_3":["2_1","4_3","0_3"],"2_4":["2_2","4_4","0_4","4_2","0_2"],"3_0":["3_2","1_0"],"3_1":["3_3","1_1","1_3"],"3_2":["3_4","3_0","1_2"],"3_3":["3_1","1_3","1_1"],"3_4":["3_2","1_4"],"4_0":["4_2","2_0","2_2"],"4_1":["4_3","2_1"],"4_2":["4_4","4_0","2_2","2_4","2_0"],"4_3":["4_1","2_3"],"4_4":["4_2","2_4","2_2"]};
   profundidade = 5;
   melhorMovimento: { from: [number, number], to: [number, number] } | null = null;
@@ -48,7 +47,7 @@ export class AppComponent implements OnInit {
     this.cabrasTabuleiro = 0;
     this.cabrasMortas = 0;
     this.vencedor = null;
-    this.historicoMovimentos = { 'goat': [], 'tiger': []};
+    this.melhorMovimento = null;
   }
 
   openModalVencedor() {
@@ -75,14 +74,6 @@ export class AppComponent implements OnInit {
   realizarJogada(rowIndex: number, colIndex: number) {
     let moveu = false;
 
-    const verificarMovimentoRepetido = (saida: string, destino: string): boolean => {
-      const movimentosAnteriores = this.historicoMovimentos[this.jogadorAtual];
-      if (movimentosAnteriores.length === 0) {
-        return false;
-      }
-      return movimentosAnteriores.some((movimento: { destino: string; saida: string; }) => movimento.destino === destino && movimento.saida === saida);
-    };
-
     if (this.jogadorAtual === 'goat' && this.cabrasTabuleiro < 20) {
       if (this.tabuleiro[rowIndex][colIndex] === null) {
         this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
@@ -96,22 +87,13 @@ export class AppComponent implements OnInit {
         if (this.pecaSelecionada) {
           const posicaoCapturasValidas = this.capturasValidas[`${this.pecaSelecionada[0]}_${this.pecaSelecionada[1]}`];
           const posicaoMovimentosValidos = this.movimentosValidos[`${this.pecaSelecionada[0]}_${this.pecaSelecionada[1]}`];
-          const saida = `${this.pecaSelecionada[0]}_${this.pecaSelecionada[1]}`;
           const destino = `${rowIndex}_${colIndex}`;
 
           if (posicaoMovimentosValidos.find(movimento => movimento == destino)) {
-            if (!verificarMovimentoRepetido(saida, destino)) {
-              this.historicoMovimentos[this.jogadorAtual].push({ saida, destino });
-
-              if (this.historicoMovimentos[this.jogadorAtual].length > 2) {
-                this.historicoMovimentos[this.jogadorAtual].shift();
-              }
-
-              this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
-              this.pecaSelecionada = null;
-              this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
-              moveu = true;
-            }
+            this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
+            this.pecaSelecionada = null;
+            this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
+            moveu = true;
           } else if (posicaoCapturasValidas.find(captura => captura == destino)) {
             const meioX = (rowIndex + this.pecaSelecionada[0]) / 2;
             const meioY = (colIndex + this.pecaSelecionada[1]) / 2;
