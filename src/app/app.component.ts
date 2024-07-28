@@ -112,7 +112,7 @@ export class AppComponent implements OnInit {
 
     if (moveu) {
       this.jogadorAtual = this.jogadorAtual === 'tiger' ? 'goat' : 'tiger';
-      this.vencedor = this.verificaVencedor();
+      this.vencedor = this.verificaVencedor(this.tabuleiro, this.cabrasMortas);
 
       if (this.vencedor) {
         this.openModalVencedor();
@@ -134,10 +134,10 @@ export class AppComponent implements OnInit {
     }
   }
 
-  private avaliar(profundidade: number = 0): number {
-    let pontuacao = 300 * this.tigresMovimentaveis() + 700 * this.cabrasMortas - 700 * this.espacosFechados() - profundidade;
+  private avaliar(profundidade: number = 0, tabuleiro: any, cabrasMortas: any): number {
+    let pontuacao = 300 * this.tigresMovimentaveis(tabuleiro) + 700 * cabrasMortas - 700 * this.espacosFechados(tabuleiro) - profundidade;
 
-    const vencedor = this.verificaVencedor();
+    const vencedor = this.verificaVencedor(tabuleiro, cabrasMortas);
     if (vencedor === 'goat') {
       return -Infinity;
     } else if (vencedor === 'tiger') {
@@ -147,12 +147,12 @@ export class AppComponent implements OnInit {
     return pontuacao;
   }
 
-  private espacosFechados(): number {
+  private espacosFechados(tabuleiro: any): number {
     let espacosFechadosCount = 0;
   
     for (let row = 0; row < 5; row++) {
       for (let col = 0; col < 5; col++) {
-        if (this.tabuleiro[row][col] === null) {
+        if (tabuleiro[row][col] === null) {
           const posicao = `${row}_${col}`;
           const movimentosValidos = this.movimentosValidos[posicao] || [];
           const capturasValidas = this.capturasValidas[posicao] || [];
@@ -160,7 +160,7 @@ export class AppComponent implements OnInit {
           let cercadoPorCabras = true;
           for (const movimento of movimentosValidos) {
             const [novoRow, novoCol] = movimento.split('_').map(Number);
-            if (this.tabuleiro[novoRow][novoCol] !== 'goat') {
+            if (tabuleiro[novoRow][novoCol] !== 'goat') {
               cercadoPorCabras = false;
               break;
             }
@@ -171,7 +171,7 @@ export class AppComponent implements OnInit {
             const [novoRow, novoCol] = captura.split('_').map(Number);
             const meioRow = (row + novoRow) / 2;
             const meioCol = (col + novoCol) / 2;
-            if (this.tabuleiro[novoRow][novoCol] === null && this.tabuleiro[meioRow][meioCol] === 'tiger') {
+            if (tabuleiro[novoRow][novoCol] === null && tabuleiro[meioRow][meioCol] === 'tiger') {
               acessivelPorTigre = true;
               break;
             }
@@ -188,13 +188,14 @@ export class AppComponent implements OnInit {
   }
   
 
-  private gerarListaMovimentos(): { from: [number, number], to: [number, number] }[] {
+  private gerarListaMovimentos(maximizingPlayer: boolean, tabuleiro: any, cabrasTabuleiro: any): { from: [number, number], to: [number, number] }[] {
     const movimentos: { from: [number, number], to: [number, number] }[] = [];
+    let jogador = maximizingPlayer ? 'tiger' : 'goat';
   
-    if (this.jogadorAtual === 'goat' && this.cabrasTabuleiro < 20) {
+    if (jogador === 'goat' && cabrasTabuleiro < 20) {
       for (let row = 0; row < 5; row++) {
         for (let col = 0; col < 5; col++) {
-          if (this.tabuleiro[row][col] === null) {
+          if (tabuleiro[row][col] === null) {
             movimentos.push({ from: [-1, -1], to: [row, col] });
           }
         }
@@ -202,24 +203,28 @@ export class AppComponent implements OnInit {
     } else {
       for (let row = 0; row < 5; row++) {
         for (let col = 0; col < 5; col++) {
-          if (this.tabuleiro[row][col] === this.jogadorAtual) {
+          if (tabuleiro[row][col] === jogador) {
             const posicao = `${row}_${col}`;
             const movimentosValidos = this.movimentosValidos[posicao] || [];
             const capturasValidas = this.capturasValidas[posicao] || [];
-  
-            for (const movimento of movimentosValidos) {
-              const [novoRow, novoCol] = movimento.split('_').map(Number);
-              if (this.tabuleiro[novoRow][novoCol] === null) {
-                movimentos.push({ from: [row, col], to: [novoRow, novoCol] });
-              }
-            }
-  
-            if (this.jogadorAtual === 'tiger') {
+            let capturasValida = false;
+
+            if (jogador === 'tiger') {
               for (const captura of capturasValidas) {
                 const [novoRow, novoCol] = captura.split('_').map(Number);
                 const meioRow = (row + novoRow) / 2;
                 const meioCol = (col + novoCol) / 2;
-                if (this.tabuleiro[novoRow][novoCol] === null && this.tabuleiro[meioRow][meioCol] === 'goat') {
+                if (tabuleiro[novoRow][novoCol] === null && tabuleiro[meioRow][meioCol] === 'goat') {
+                  movimentos.push({ from: [row, col], to: [novoRow, novoCol] });
+                  capturasValida = true;
+                }
+              }
+            }
+            
+            if (!capturasValida) {
+              for (const movimento of movimentosValidos) {
+                const [novoRow, novoCol] = movimento.split('_').map(Number);
+                if (tabuleiro[novoRow][novoCol] === null) {
                   movimentos.push({ from: [row, col], to: [novoRow, novoCol] });
                 }
               }
@@ -232,59 +237,50 @@ export class AppComponent implements OnInit {
   }
   
 
-  private mover(movimento: { from: [number, number], to: [number, number] }): void {
+  private mover(tabuleiro: any, cabrasMortas: any, cabrasTabuleiro: any, movimento: { from: [number, number], to: [number, number] }, maximizingPlayer: boolean): any {
     const [fromRow, fromCol] = movimento.from;
     const [toRow, toCol] = movimento.to;
-  
+    let jogador: ('tiger' | 'goat') = maximizingPlayer ? 'tiger' : 'goat';
     if (fromRow === -1 && fromCol === -1) {
-      this.tabuleiro[toRow][toCol] = 'goat';
-      this.cabrasTabuleiro++;
+      tabuleiro[toRow][toCol] = 'goat';
+      cabrasTabuleiro++;
     } else {
-      if (this.tabuleiro[fromRow][fromCol] === 'tiger' && Math.abs(fromRow - toRow) === 2) {
-        const posicaoPecaCapturada = [(toRow + fromRow) / 2, (toCol + fromCol) / 2];
-        this.tabuleiro[posicaoPecaCapturada[0]][posicaoPecaCapturada[1]] = null;
-        this.cabrasMortas++;
+      const posicao = `${fromRow}_${fromCol}`;
+      const destino = `${toRow}_${toCol}`;
+      const capturasValidas = this.capturasValidas[posicao] || [];
+      if (tabuleiro[fromRow][fromCol] === 'tiger' && capturasValidas.find(captura => captura == destino)) {
+        const meioX = (toRow + fromRow) / 2;
+        const meioY = (toCol + fromCol) / 2;
+        if (tabuleiro[meioX][meioY] === 'goat') {
+          tabuleiro[meioX][meioY] = null;
+          cabrasMortas++;
+        }
       }
   
-      this.tabuleiro[toRow][toCol] = this.jogadorAtual;
-      this.tabuleiro[fromRow][fromCol] = null;
+      tabuleiro[toRow][toCol] = jogador;
+      tabuleiro[fromRow][fromCol] = null;
     }
+    return { tabuleiro, cabrasMortas, cabrasTabuleiro };
   }
   
-
-  private desfazerMovimento(movimento: { from: [number, number], to: [number, number] }): void {
-    const [fromRow, fromCol] = movimento.from;
-    const [toRow, toCol] = movimento.to;
-  
-    if (fromRow === -1 && fromCol === -1) {
-      this.tabuleiro[toRow][toCol] = null;
-      this.cabrasTabuleiro--;
-    } else {
-      if (this.tabuleiro[toRow][toCol] === 'tiger' && Math.abs(fromRow - toRow) === 2) {
-        const posicaoPecaCapturada = [(toRow + fromRow) / 2, (toCol + fromCol) / 2];
-        this.tabuleiro[posicaoPecaCapturada[0]][posicaoPecaCapturada[1]] = 'goat';
-        this.cabrasMortas--;
-      }
-  
-      this.tabuleiro[fromRow][fromCol] = this.jogadorAtual;
-      this.tabuleiro[toRow][toCol] = null;
-    }
-  }
-  
-
-  private minimax(profundidade: number, maximizingPlayer: boolean, alpha: number, beta: number): number {
-    if (profundidade === 0 || this.verificaVencedor() !== null) {
-      return this.avaliar(profundidade);
+  private minimax(profundidade: number, maximizingPlayer: boolean, alpha: number, beta: number, tabuleiro: any, cabrasMortas: any, cabrasTabuleiro: any): number {
+    if (profundidade === 0 || this.verificaVencedor(tabuleiro, cabrasMortas) !== null) {
+      return this.avaliar(profundidade, tabuleiro, cabrasMortas);
     }
 
-    const movimentos = this.gerarListaMovimentos();
+    const movimentos = this.gerarListaMovimentos(maximizingPlayer, tabuleiro, cabrasTabuleiro);
 
     if (maximizingPlayer) {
       let pontuacaoMaxima = -Infinity;
       for (const movimento of movimentos) {
-        this.mover(movimento);
-        const pontuacao = this.minimax(profundidade - 1, false, alpha, beta);
-        this.desfazerMovimento(movimento);
+        let tabuleiroCopy = JSON.parse(JSON.stringify(tabuleiro));
+        let cabrasMortasCopy = JSON.parse(JSON.stringify(cabrasMortas));
+        let cabrasTabuleiroCopy = JSON.parse(JSON.stringify(cabrasTabuleiro));
+        let ret = this.mover(tabuleiroCopy, cabrasMortasCopy, cabrasTabuleiroCopy, movimento, maximizingPlayer);
+        tabuleiroCopy = ret.tabuleiro;
+        cabrasMortasCopy = ret.cabrasMortas;
+        cabrasTabuleiroCopy = ret.cabrasTabuleiro;
+        const pontuacao = this.minimax(profundidade - 1, false, alpha, beta, tabuleiroCopy, cabrasMortasCopy, cabrasTabuleiroCopy);
         if (pontuacao > pontuacaoMaxima) {
           pontuacaoMaxima = pontuacao;
           if (profundidade === this.profundidade) {
@@ -300,9 +296,14 @@ export class AppComponent implements OnInit {
     } else {
       let pontuacaoMinima = Infinity;
       for (const movimento of movimentos) {
-        this.mover(movimento);
-        const pontuacao = this.minimax(profundidade - 1, true, alpha, beta);
-        this.desfazerMovimento(movimento);
+        let tabuleiroCopy = JSON.parse(JSON.stringify(tabuleiro));
+        let cabrasMortasCopy = JSON.parse(JSON.stringify(cabrasMortas));
+        let cabrasTabuleiroCopy = JSON.parse(JSON.stringify(cabrasTabuleiro));
+        let ret = this.mover(tabuleiroCopy, cabrasMortasCopy, cabrasTabuleiroCopy, movimento, maximizingPlayer);
+        tabuleiroCopy = ret.tabuleiro;
+        cabrasMortasCopy = ret.cabrasMortas;
+        cabrasTabuleiroCopy = ret.cabrasTabuleiro;
+        const pontuacao = this.minimax(profundidade - 1, true, alpha, beta, tabuleiroCopy, cabrasMortasCopy, cabrasTabuleiroCopy);
         if (pontuacao < pontuacaoMinima) {
           pontuacaoMinima = pontuacao;
           if (profundidade === this.profundidade) {
@@ -321,26 +322,26 @@ export class AppComponent implements OnInit {
   private getMelhorMovimento(player: 'goat' | 'tiger'): { from: [number, number], to: [number, number] } | null {
     this.jogadorAtual = player;
     this.melhorMovimento = null;
-    this.minimax(this.profundidade, player === 'tiger', -Infinity, Infinity);
+    this.minimax(this.profundidade, player === 'tiger', -Infinity, Infinity, this.tabuleiro, this.cabrasMortas, this.cabrasTabuleiro);
     return this.melhorMovimento;
   }
 
-  verificaVencedor() {
-    if (this.cabrasMortas === 5) {
+  verificaVencedor(tabuleiro: any, cabrasMortas: any) {
+    if (cabrasMortas === 5) {
       return 'tiger';
-    } else if(this.tigresMovimentaveis() === 0) {
+    } else if(this.tigresMovimentaveis(tabuleiro) === 0) {
       return 'goat';
     }
     return null;
   }
 
-  tigresMovimentaveis(): number {
+  tigresMovimentaveis(tabuleiro: any): number {
     const tigres = [];
     let tigresMovimentaveis = 0;
     
-    for (let i = 0; i < this.tabuleiro.length; i++) {
-      for (let j = 0; j < this.tabuleiro[i].length; j++) {
-        if (this.tabuleiro[i][j] === 'tiger') {
+    for (let i = 0; i < tabuleiro.length; i++) {
+      for (let j = 0; j < tabuleiro[i].length; j++) {
+        if (tabuleiro[i][j] === 'tiger') {
           tigres.push([i, j]);
         }
       }
@@ -354,7 +355,7 @@ export class AppComponent implements OnInit {
   
       for (const movimento of movimentos) {
         const [novoX, novoY] = movimento.split('_').map(Number);
-        if (this.tabuleiro[novoX][novoY] === null) {
+        if (tabuleiro[novoX][novoY] === null) {
           tigreMovimental = true;
           break;
         }
@@ -365,7 +366,7 @@ export class AppComponent implements OnInit {
           const [novoX, novoY] = captura.split('_').map(Number);
           const meioX = (x + novoX) / 2;
           const meioY = (y + novoY) / 2;
-          if (this.tabuleiro[novoX][novoY] === null && this.tabuleiro[meioX][meioY] === 'goat') {
+          if (tabuleiro[novoX][novoY] === null && tabuleiro[meioX][meioY] === 'goat') {
             tigreMovimental = true;
             break;
           }
