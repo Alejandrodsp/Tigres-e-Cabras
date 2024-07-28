@@ -27,7 +27,12 @@
       </div>
     </div>
     <div class="container-btn-mute">
-        <mat-icon (click)="mutarMusica()">{{this.backgroundMusic.muted ? 'volume_off' : 'volume_up'}}</mat-icon>
+      <mat-icon (click)="novoJogo()" matTooltip="Jogar novamente">
+        replay
+      </mat-icon>
+      <mat-icon (click)="mutarMusica()" [matTooltip]="this.backgroundMusic.muted ? 'Desmutar música de fundo' : 'Mutar música de fundo'">
+        {{this.backgroundMusic.muted ? 'volume_off' : 'volume_up'}}
+      </mat-icon>
     </div>
   </div>
 </div>
