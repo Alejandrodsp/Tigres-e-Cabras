@@ -48,6 +48,7 @@
       flex-direction: column;
       align-items: center;
       gap: 32px;
+      min-height: 250px;
   
       .texto-deseja-jogar {
         font-family: 'Rajdhani', sans-serif;
@@ -83,6 +84,12 @@
         .container-btn-selecao-goat {
           background-image: url('../assets/goat.png');
           border: 5px solid gray;
+        }
+
+        .slider-profundidade {
+          scale: 1.2;
+          width: 300px;
+          margin-top: 32px;
         }
       }
     }
@@ -134,9 +141,10 @@
       }
     }
 
-    .container-btn-mute {
+    .container-btns {
       display: flex;
       justify-content: space-between;
+      flex-direction: row-reverse;
       width: 500px;
 
       .mat-icon {
@@ -202,5 +210,9 @@
   .mat-dialog-container {
     padding: 0;
     border-radius: 8px;
+  }
+
+  .mat-slider.mat-accent .mat-slider-track-fill, .mat-slider.mat-accent .mat-slider-thumb, .mat-slider.mat-accent .mat-slider-thumb-label {
+    background-color: var(--cor5);
   }
 }

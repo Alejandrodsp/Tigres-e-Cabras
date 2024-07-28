@@ -3,12 +3,23 @@
     <div class="titulo">
       <h1>Tigres e Cabras</h1>
     </div>
-    <div class="container-conteudo">
+    <div class="container-conteudo" *ngIf="telaPrincipal">
       <span class="texto-deseja-jogar">Jogar como?</span>
       <div class="container-deseja-jogar">
         <div class="container-btn-selecao container-btn-selecao-tiger" (click)="selecionarModoJogo('tiger')"></div>
         <div class="container-btn-selecao container-btn-selecao-goat"  (click)="selecionarModoJogo('goat')"></div>
       </div>
+    </div>
+    <div class="container-conteudo" *ngIf="!telaPrincipal">
+      <span class="texto-deseja-jogar">Escolha a dificuldade</span>
+      <div class="container-deseja-jogar">
+        <mat-slider [max]="profundidadeMaximaPermitida" min="1" step="1" thumbLabel [(ngModel)]="profundidade" class="slider-profundidade"></mat-slider>
+      </div>
+    </div>
+    <div class="container-btns">
+      <mat-icon (click)="mudarTelaPrincipal()" [matTooltip]="telaPrincipal ? 'Configurações' : 'Página Inicial'">
+        {{ telaPrincipal ? 'settings' : 'home'}}
+      </mat-icon>
     </div>
   </div>
 
@@ -26,12 +37,12 @@
         </div>
       </div>
     </div>
-    <div class="container-btn-mute">
-      <mat-icon (click)="novoJogo()" matTooltip="Jogar novamente">
-        replay
-      </mat-icon>
+    <div class="container-btns">
       <mat-icon (click)="mutarMusica()" [matTooltip]="this.backgroundMusic.muted ? 'Desmutar música de fundo' : 'Mutar música de fundo'">
         {{this.backgroundMusic.muted ? 'volume_off' : 'volume_up'}}
+      </mat-icon>
+      <mat-icon (click)="novoJogo()" matTooltip="Jogar novamente">
+        replay
       </mat-icon>
     </div>
   </div>
