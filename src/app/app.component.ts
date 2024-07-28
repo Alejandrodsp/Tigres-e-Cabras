@@ -85,25 +85,35 @@ export class AppComponent implements OnInit {
         this.pecaSelecionada = [rowIndex, colIndex];
       } else if (this.tabuleiro[rowIndex][colIndex] === null) {
         if (this.pecaSelecionada) {
-          const posicaoCapturasValidas = this.capturasValidas[`${this.pecaSelecionada[0]}_${this.pecaSelecionada[1]}`];
           const posicaoMovimentosValidos = this.movimentosValidos[`${this.pecaSelecionada[0]}_${this.pecaSelecionada[1]}`];
           const destino = `${rowIndex}_${colIndex}`;
-
-          if (posicaoMovimentosValidos.find(movimento => movimento == destino)) {
-            this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
-            this.pecaSelecionada = null;
-            this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
-            moveu = true;
-          } else if (posicaoCapturasValidas.find(captura => captura == destino)) {
-            const meioX = (rowIndex + this.pecaSelecionada[0]) / 2;
-            const meioY = (colIndex + this.pecaSelecionada[1]) / 2;
-            if (this.tabuleiro[meioX][meioY] === 'goat') {
-              this.tabuleiro[meioX][meioY] = null;
+          if (this.jogadorAtual === 'tiger') {
+            const capturasPossiveis = this.verificaCapturasPossiveis();
+            if (!(Object.values(capturasPossiveis).every(arr => Array.isArray(arr) && arr.length === 0))) {
+              if (capturasPossiveis[`${this.pecaSelecionada[0]}_${this.pecaSelecionada[1]}`].includes(destino)) {
+                const meioX = (rowIndex + this.pecaSelecionada[0]) / 2;
+                const meioY = (colIndex + this.pecaSelecionada[1]) / 2;
+                if (this.tabuleiro[meioX][meioY] === 'goat') {
+                  this.tabuleiro[meioX][meioY] = null;
+                  this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
+                  this.pecaSelecionada = null;
+                  this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
+                  moveu = true;
+                  this.cabrasMortas++;
+                }
+              }
+            } else if (posicaoMovimentosValidos.find(movimento => movimento == destino)) {
               this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
               this.pecaSelecionada = null;
               this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
               moveu = true;
-              this.cabrasMortas++;
+            }
+          } else {
+            if (posicaoMovimentosValidos.find(movimento => movimento == destino)) {
+              this.tabuleiro[this.pecaSelecionada[0]][this.pecaSelecionada[1]] = null;
+              this.pecaSelecionada = null;
+              this.tabuleiro[rowIndex][colIndex] = this.jogadorAtual;
+              moveu = true;
             }
           }
         }
@@ -124,12 +134,57 @@ export class AppComponent implements OnInit {
     }
   }
 
+  verificaCapturasPossiveis() {
+    const tigres = [];
+    let objCapturasPossiveis: any = {};
+
+    for (let i = 0; i < this.tabuleiro.length; i++) {
+      for (let j = 0; j < this.tabuleiro[i].length; j++) {
+        if (this.tabuleiro[i][j] === 'tiger') {
+          tigres.push([i, j]);
+        }
+      }
+    }
+
+    for (const [x, y] of tigres) {
+      const posicaoTigre = `${x}_${y}`;
+      const posicaoCapturasValidas = this.capturasValidas[posicaoTigre] || [];
+      let capturasPossiveis = []
+
+      for (const posicao of posicaoCapturasValidas) {
+        const [rowIndex, colIndex] = posicao.split('_').map(Number);
+        const meioX = (rowIndex + x) / 2;
+        const meioY = (colIndex + y) / 2;
+        if (this.tabuleiro[meioX][meioY] === 'goat' && this.tabuleiro[rowIndex][colIndex] === null) {
+          capturasPossiveis.push(posicao);
+        }
+      }
+      objCapturasPossiveis[posicaoTigre] = capturasPossiveis;
+    }
+    return objCapturasPossiveis;
+  }
+
   realizarJogadaComputador() {
     const melhorMovimento = this.getMelhorMovimento(this.jogadorAtual);
     if (melhorMovimento) {
-      const [fromRow, fromCol] = melhorMovimento.from;
-      const [toRow, toCol] = melhorMovimento.to;
+      let [fromRow, fromCol] = melhorMovimento.from;
+      let [toRow, toCol] = melhorMovimento.to;
       if (fromRow !== -1 && fromCol !== -1) this.pecaSelecionada = [fromRow, fromCol];
+      if (this.jogadorAtual === 'tiger') {
+        const capturasPossiveis = this.verificaCapturasPossiveis();
+        if (!capturasPossiveis[`${fromRow}_${fromCol}`].includes(`${toRow}_${toCol}`)) {
+          Object.keys(capturasPossiveis).forEach(captura => {
+            if (capturasPossiveis[captura] && capturasPossiveis[captura].length) {
+              let [pecaSelecionadaRow, pecaSelecionadaCol] = captura.split('_').map(Number);
+              this.pecaSelecionada = [pecaSelecionadaRow, pecaSelecionadaCol];
+              let [novoToRow, novoToCol] = capturasPossiveis[captura][0].split('_').map(Number);
+              toRow = novoToRow;
+              toCol = novoToCol;
+            }
+          })
+        }
+      }
+
       setTimeout(() => { this.realizarJogada(toRow, toCol) }, 1000);
     }
   }
