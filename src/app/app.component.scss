@@ -99,7 +99,9 @@
       justify-content: space-between;
       align-items: center;
       padding: 0 16px;
-      width: 468px;
+      max-width: 468px;
+      width: calc(100% - 64px);
+      min-height: 40px;
       height: 40px;
       background: var(--cor5);
       border-radius: 40px;
@@ -109,12 +111,13 @@
         font-size: 16px;
         font-weight: bold;
         font-family: 'Rajdhani';
+        @media screen and (max-width: 500px) {
+          font-size: 12px;
+        }
       }
     }
 
     .tabuleiro {
-      width: 500px;
-      height: 500px;
       background-repeat: no-repeat;
       background-size: contain;
       background-position: center;
@@ -123,16 +126,47 @@
       grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
       grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 
+      @media screen and (max-width: 500px) {
+        width: 320px;
+        height: 320px;
+
+        .row {
+          width: 80px;
+
+          .cell {
+            height: 80px;
+            top: -32px;
+            left: -32px;
+
+            img {
+              width: 64px;
+            }
+          }
+        }
+      }
+
+      @media screen and (min-width: 501px) {
+        width: 500px;
+        height: 500px;
+
+        .row {
+          width: 125px;
+
+          .cell {
+            height: 125px;
+            top: -50px;
+            left: -50px;
+
+            img {
+              width: 100px;
+            }
+          }
+        }
+      }
+
       .row {
-        width: 125px;
         .cell {
           position: relative;
-          top: -50px;
-          left: -50px;
-          height: 125px;
-          img {
-            width: 100px;
-          }
 
           .selecionada {
             scale: 1.2;
@@ -145,7 +179,8 @@
       display: flex;
       justify-content: space-between;
       flex-direction: row-reverse;
-      width: 500px;
+      max-width: 500px;
+      width: calc(100% - 64px);
 
       .mat-icon {
         scale: 2;
